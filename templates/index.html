@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quizlet Lite</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; margin: 0; padding: 20px; background-color: #f0f2f5; }
+        .container { max-width: 800px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1, h2 { color: #333; margin-bottom: 20px; }
+        textarea { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; resize: none; overflow-y: hidden; transition: border-color 0.3s; }
+        textarea:focus { outline: none; border-color: #4CAF50; box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2); }
+        button { background-color: #4CAF50; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; transition: background-color 0.3s; }
+        button:hover { background-color: #45a049; }
+        .flashcard { border: 1px solid #e0e0e0; padding: 20px; margin-bottom: 20px; border-radius: 8px; background-color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .result-area { margin-top: 20px; padding: 15px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #f9f9f9; }
+        .score { font-weight: bold; font-size: 1.2em; color: #4CAF50; }
+        #flashcard-display, #result, #back-display { display: none; }
+        #flashcards-list { margin-top: 30px; }
+        #flashcards-list button { margin-bottom: 10px; background-color: #f0f2f5; color: #333; border: 1px solid #ddd; }
+        #flashcards-list button:hover { background-color: #e8eaed; }
+        .navigation { display: flex; justify-content: space-between; margin-top: 20px; }
+        .navigation button { background-color: #2196F3; }
+        .navigation button:hover { background-color: #1976D2; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Quizlet Lite</h1>
+        
+        <div id="create-flashcard">
+            <h2>Create Flashcard</h2>
+            <textarea id="front" placeholder="Front of card" rows="3"></textarea>
+            <textarea id="back" placeholder="Back of card" rows="3"></textarea>
+            <button onclick="createFlashcard()">Add Flashcard</button>
+        </div>
+
+        <div id="flashcards-list">
+            <h2>Your Flashcards</h2>
+            <!-- Flashcards will be listed here -->
+        </div>
+
+        <div id="flashcard-display" class="flashcard">
+            <h2>Study Flashcard</h2>
+            <p id="front-display"></p>
+            <textarea id="user-answer" placeholder="Your answer" rows="3"></textarea>
+            <button onclick="checkAnswer()">Check Answer</button>
+            <div id="result" class="result-area">
+                <p class="score">Score: <span id="score"></span>/10</p>
+                <p id="explanation"></p>
+            </div>
+            <p id="back-display"></p>
+            <div class="navigation">
+                <button onclick="navigateFlashcard(-1)">Previous</button>
+                <button onclick="navigateFlashcard(1)">Next</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let flashcards = [];
+        let currentFlashcardIndex = -1;
+
+        function resizeTextarea(element) {
+            element.style.height = 'auto';
+            element.style.height = (element.scrollHeight) + 'px';
+        }
+
+        function initializeTextareas() {
+            const textareas = document.querySelectorAll('textarea');
+            textareas.forEach(textarea => {
+                textarea.addEventListener('input', function() {
+                    resizeTextarea(this);
+                });
+                resizeTextarea(textarea);
+            });
+        }
+
+        async function createFlashcard() {
+            const front = document.getElementById('front').value;
+            const back = document.getElementById('back').value;
+
+            if (front && back) {
+                try {
+                    const response = await fetch('/api/flashcards', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ front, back }),
+                    });
+                    const data = await response.json();
+                    flashcards.push(data);
+                    updateFlashcardsList();
+                    document.getElementById('front').value = '';
+                    document.getElementById('back').value = '';
+                    initializeTextareas();
+                } catch (error) {
+                    console.error('Error creating flashcard:', error);
+                    alert('Failed to create flashcard. Please try again.');
+                }
+            } else {
+                alert('Please enter both front and back of the flashcard.');
+            }
+        }
+
+        function updateFlashcardsList() {
+            const list = document.getElementById('flashcards-list');
+            list.innerHTML = '<h2>Your Flashcards</h2>';
+            flashcards.forEach((card, index) => {
+                const button = document.createElement('button');
+                button.textContent = `Flashcard ${index + 1}: ${card.front.substring(0, 30)}${card.front.length > 30 ? '...' : ''}`;
+                button.onclick = () => displayFlashcard(index);
+                list.appendChild(button);
+            });
+        }
+
+        function displayFlashcard(index) {
+            if (index >= 0 && index < flashcards.length) {
+                currentFlashcardIndex = index;
+                const card = flashcards[index];
+                document.getElementById('flashcard-display').style.display = 'block';
+                document.getElementById('front-display').textContent = card.front;
+                document.getElementById('back-display').style.display = 'none';
+                document.getElementById('result').style.display = 'none';
+                document.getElementById('user-answer').value = '';
+                initializeTextareas();
+            }
+        }
+
+        function navigateFlashcard(direction) {
+            const newIndex = currentFlashcardIndex + direction;
+            if (newIndex >= 0 && newIndex < flashcards.length) {
+                displayFlashcard(newIndex);
+            }
+        }
+
+        async function checkAnswer() {
+            const userAnswer = document.getElementById('user-answer').value;
+            const currentCard = flashcards[currentFlashcardIndex];
+
+            try {
+                const response = await fetch('/api/check-answer', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        front: currentCard.front,
+                        back: currentCard.back,
+                        userAnswer: userAnswer
+                    }),
+                });
+                const data = await response.json();
+
+                document.getElementById('score').textContent = data.score;
+                document.getElementById('explanation').textContent = data.explanation;
+                document.getElementById('result').style.display = 'block';
+                document.getElementById('back-display').textContent = `Correct answer: ${currentCard.back}`;
+                document.getElementById('back-display').style.display = 'block';
+            } catch (error) {
+                console.error('Error checking answer:', error);
+                alert('Failed to check answer. Please try again.');
+            }
+        }
+
+        // Initialize textareas on page load
+        document.addEventListener('DOMContentLoaded', initializeTextareas);
+    </script>
+</body>
+</html>
