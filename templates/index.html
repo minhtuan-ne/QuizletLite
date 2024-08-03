@@ -10,18 +10,21 @@
         h1, h2 { color: #333; margin-bottom: 20px; }
         textarea { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; resize: none; overflow-y: hidden; transition: border-color 0.3s; }
         textarea:focus { outline: none; border-color: #4CAF50; box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2); }
-        button { background-color: #4CAF50; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; transition: background-color 0.3s; }
+        button { background-color: #4CAF50; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; transition: background-color 0.3s; margin-right: 10px; }
         button:hover { background-color: #45a049; }
         .flashcard { border: 1px solid #e0e0e0; padding: 20px; margin-bottom: 20px; border-radius: 8px; background-color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .result-area { margin-top: 20px; padding: 15px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #f9f9f9; }
-        .score { font-weight: bold; font-size: 1.2em; color: #4CAF50; }
-        #flashcard-display, #result, #back-display { display: none; }
+        .score { font-weight: bold; font-size: 1.2em; }
+        .score.correct { color: #4CAF50; }
+        .score.incorrect { color: #FF0000; }
+        #flashcard-display, #result, #back-display, #pure-flashcard { display: none; }
         #flashcards-list { margin-top: 30px; }
         #flashcards-list button { margin-bottom: 10px; background-color: #f0f2f5; color: #333; border: 1px solid #ddd; }
         #flashcards-list button:hover { background-color: #e8eaed; }
         .navigation { display: flex; justify-content: space-between; margin-top: 20px; }
         .navigation button { background-color: #2196F3; }
         .navigation button:hover { background-color: #1976D2; }
+        #pure-flashcard { cursor: pointer; text-align: center; font-size: 24px; height: 200px; display: flex; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
@@ -40,13 +43,19 @@
             <!-- Flashcards will be listed here -->
         </div>
 
+        <div id="study-options" style="margin-top: 20px;">
+            <button onclick="startStudyMode()">Study Mode</button>
+            <button onclick="startPureFlashcardMode()">Pure Flashcard Mode</button>
+            <button onclick="shuffleFlashcards()">Shuffle Flashcards</button>
+        </div>
+
         <div id="flashcard-display" class="flashcard">
             <h2>Study Flashcard</h2>
             <p id="front-display"></p>
             <textarea id="user-answer" placeholder="Your answer" rows="3"></textarea>
             <button onclick="checkAnswer()">Check Answer</button>
             <div id="result" class="result-area">
-                <p class="score">Score: <span id="score"></span>/10</p>
+                <p class="score" id="score"></p>
                 <p id="explanation"></p>
             </div>
             <p id="back-display"></p>
@@ -55,11 +64,17 @@
                 <button onclick="navigateFlashcard(1)">Next</button>
             </div>
         </div>
+
+        <div id="pure-flashcard" class="flashcard" onclick="flipPureFlashcard()">
+            <!-- Content will be dynamically inserted here -->
+        </div>
     </div>
 
     <script>
         let flashcards = [];
         let currentFlashcardIndex = -1;
+        let isPureFlashcardMode = false;
+        let isShowingFront = true;
 
         function resizeTextarea(element) {
             element.style.height = 'auto';
@@ -135,33 +150,67 @@
             }
         }
 
-        async function checkAnswer() {
-            const userAnswer = document.getElementById('user-answer').value;
+        function checkAnswer() {
+            const userAnswer = document.getElementById('user-answer').value.trim();
             const currentCard = flashcards[currentFlashcardIndex];
+            const correctAnswer = currentCard.back.trim();
 
-            try {
-                const response = await fetch('/api/check-answer', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        front: currentCard.front,
-                        back: currentCard.back,
-                        userAnswer: userAnswer
-                    }),
-                });
-                const data = await response.json();
+            const isCorrect = userAnswer.toLowerCase() === correctAnswer.toLowerCase();
 
-                document.getElementById('score').textContent = data.score;
-                document.getElementById('explanation').textContent = data.explanation;
-                document.getElementById('result').style.display = 'block';
-                document.getElementById('back-display').textContent = `Correct answer: ${currentCard.back}`;
-                document.getElementById('back-display').style.display = 'block';
-            } catch (error) {
-                console.error('Error checking answer:', error);
-                alert('Failed to check answer. Please try again.');
+            const scoreElement = document.getElementById('score');
+            scoreElement.textContent = isCorrect ? "Correct!" : "Incorrect";
+            scoreElement.className = isCorrect ? "score correct" : "score incorrect";
+
+            document.getElementById('explanation').textContent = isCorrect 
+                ? "Great job! Your answer matches exactly." 
+                : "Your answer doesn't match exactly. Please try again.";
+            document.getElementById('result').style.display = 'block';
+            document.getElementById('back-display').textContent = `Correct answer: ${correctAnswer}`;
+            document.getElementById('back-display').style.display = 'block';
+        }
+
+        function shuffleFlashcards() {
+            for (let i = flashcards.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [flashcards[i], flashcards[j]] = [flashcards[j], flashcards[i]];
             }
+            updateFlashcardsList();
+            alert('Flashcards have been shuffled!');
+        }
+
+        function startStudyMode() {
+            isPureFlashcardMode = false;
+            document.getElementById('flashcard-display').style.display = 'block';
+            document.getElementById('pure-flashcard').style.display = 'none';
+            if (flashcards.length > 0) {
+                displayFlashcard(0);
+            } else {
+                alert('Please create some flashcards first!');
+            }
+        }
+
+        function startPureFlashcardMode() {
+            if (flashcards.length === 0) {
+                alert('Please create some flashcards first!');
+                return;
+            }
+            isPureFlashcardMode = true;
+            currentFlashcardIndex = 0;
+            isShowingFront = true;
+            document.getElementById('flashcard-display').style.display = 'none';
+            document.getElementById('pure-flashcard').style.display = 'flex';
+            updatePureFlashcard();
+        }
+
+        function updatePureFlashcard() {
+            const card = flashcards[currentFlashcardIndex];
+            document.getElementById('pure-flashcard').textContent = isShowingFront ? card.front : card.back;
+        }
+
+        function flipPureFlashcard() {
+            if (!isPureFlashcardMode) return;
+            isShowingFront = !isShowingFront;
+            updatePureFlashcard();
         }
 
         // Initialize textareas on page load
