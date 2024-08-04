@@ -23,8 +23,8 @@ Follow these steps to get your development environment set up:
 
 1. Clone the repository
    ```
-   git clone https://github.com/yourusername/flask-flashcard-app.git
-   cd flask-flashcard-app
+   git clone https://github.com/minhtuan-ne/QuizletLite.git
+   cd QuizletLite
    ```
 
 2. Create a virtual environment
