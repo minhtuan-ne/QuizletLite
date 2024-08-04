@@ -17,14 +17,34 @@
         .score { font-weight: bold; font-size: 1.2em; }
         .score.correct { color: #4CAF50; }
         .score.incorrect { color: #FF0000; }
-        #flashcard-display, #result, #back-display, #pure-flashcard { display: none; }
+        #flashcard-display, #result, #back-display { display: none; }
         #flashcards-list { margin-top: 30px; }
         #flashcards-list button { margin-bottom: 10px; background-color: #f0f2f5; color: #333; border: 1px solid #ddd; }
         #flashcards-list button:hover { background-color: #e8eaed; }
         .navigation { display: flex; justify-content: space-between; margin-top: 20px; }
         .navigation button { background-color: #2196F3; }
         .navigation button:hover { background-color: #1976D2; }
-        #pure-flashcard { cursor: pointer; text-align: center; font-size: 24px; height: 200px; display: flex; align-items: center; justify-content: center; }
+        #pure-flashcard-container { display: none; perspective: 1000px; }
+        .pure-flashcard { position: relative; width: 100%; height: 200px; transition: transform 0.6s; transform-style: preserve-3d; cursor: pointer; }
+        .pure-flashcard.flipped { transform: rotateY(180deg); }
+        .pure-flashcard-front, .pure-flashcard-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .pure-flashcard-back { transform: rotateY(180deg); }
+        .pure-flashcard-navigation { display: flex; justify-content: space-between; margin-top: 20px; }
+        .pure-flashcard-navigation button { background-color: #2196F3; }
+        .pure-flashcard-navigation button:hover { background-color: #1976D2; }
+        .delete-btn {
+            background-color: #f44336;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+        .delete-btn:hover {
+            background-color: #d32f2f;
+        }
     </style>
 </head>
 <body>
@@ -65,8 +85,16 @@
             </div>
         </div>
 
-        <div id="pure-flashcard" class="flashcard" onclick="flipPureFlashcard()">
-            <!-- Content will be dynamically inserted here -->
+        <div id="pure-flashcard-container">
+            <div class="pure-flashcard" onclick="flipPureFlashcard()">
+                <div class="pure-flashcard-front"></div>
+                <div class="pure-flashcard-back"></div>
+            </div>
+            <div class="pure-flashcard-navigation">
+                <button onclick="navigatePureFlashcard(-1)">Previous</button>
+                <button onclick="shufflePureFlashcards()">Shuffle</button>
+                <button onclick="navigatePureFlashcard(1)">Next</button>
+            </div>
         </div>
     </div>
 
@@ -91,34 +119,7 @@
             });
         }
 
-        async function createFlashcard() {
-            const front = document.getElementById('front').value;
-            const back = document.getElementById('back').value;
-
-            if (front && back) {
-                try {
-                    const response = await fetch('/api/flashcards', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ front, back }),
-                    });
-                    const data = await response.json();
-                    flashcards.push(data);
-                    updateFlashcardsList();
-                    document.getElementById('front').value = '';
-                    document.getElementById('back').value = '';
-                    initializeTextareas();
-                } catch (error) {
-                    console.error('Error creating flashcard:', error);
-                    alert('Failed to create flashcard. Please try again.');
-                }
-            } else {
-                alert('Please enter both front and back of the flashcard.');
-            }
-        }
-
+      
         function updateFlashcardsList() {
             const list = document.getElementById('flashcards-list');
             list.innerHTML = '<h2>Your Flashcards</h2>';
@@ -169,19 +170,10 @@
             document.getElementById('back-display').style.display = 'block';
         }
 
-        function shuffleFlashcards() {
-            for (let i = flashcards.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [flashcards[i], flashcards[j]] = [flashcards[j], flashcards[i]];
-            }
-            updateFlashcardsList();
-            alert('Flashcards have been shuffled!');
-        }
-
         function startStudyMode() {
             isPureFlashcardMode = false;
             document.getElementById('flashcard-display').style.display = 'block';
-            document.getElementById('pure-flashcard').style.display = 'none';
+            document.getElementById('pure-flashcard-container').style.display = 'none';
             if (flashcards.length > 0) {
                 displayFlashcard(0);
             } else {
@@ -198,23 +190,177 @@
             currentFlashcardIndex = 0;
             isShowingFront = true;
             document.getElementById('flashcard-display').style.display = 'none';
-            document.getElementById('pure-flashcard').style.display = 'flex';
+            document.getElementById('pure-flashcard-container').style.display = 'block';
             updatePureFlashcard();
         }
 
         function updatePureFlashcard() {
-            const card = flashcards[currentFlashcardIndex];
-            document.getElementById('pure-flashcard').textContent = isShowingFront ? card.front : card.back;
-        }
+        const card = flashcards[currentFlashcardIndex];
+        document.querySelector('.pure-flashcard-front').textContent = card.front;
+        document.querySelector('.pure-flashcard-back').textContent = card.back;
+        document.querySelector('.pure-flashcard').classList.remove('flipped');
+        isShowingFront = true;
+    }
 
         function flipPureFlashcard() {
             if (!isPureFlashcardMode) return;
+            document.querySelector('.pure-flashcard').classList.toggle('flipped');
             isShowingFront = !isShowingFront;
+        }
+
+        function navigatePureFlashcard(direction) {
+    if (!isPureFlashcardMode) return;
+    currentFlashcardIndex += direction;
+    if (currentFlashcardIndex < 0) {
+        currentFlashcardIndex = flashcards.length - 1;
+    } else if (currentFlashcardIndex >= flashcards.length) {
+        currentFlashcardIndex = 0;
+    }
+    updatePureFlashcard();
+    // Reset the card to its front face
+    document.querySelector('.pure-flashcard').classList.remove('flipped');
+    isShowingFront = true;
+}
+
+
+        function shufflePureFlashcards() {
+            if (!isPureFlashcardMode) return;
+            shuffleFlashcards();
+            currentFlashcardIndex = 0;
             updatePureFlashcard();
         }
 
-        // Initialize textareas on page load
-        document.addEventListener('DOMContentLoaded', initializeTextareas);
+        function shuffleFlashcards() {
+            for (let i = flashcards.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [flashcards[i], flashcards[j]] = [flashcards[j], flashcards[i]];
+            }
+            updateFlashcardsList();
+            if (!isPureFlashcardMode) {
+                alert('Flashcards have been shuffled!');
+            }
+        }
+
+        async function fetchFlashcards() {
+    console.log("Attempting to fetch flashcards...");
+    try {
+        const response = await fetch('/api/flashcards');
+        console.log("Fetch response:", response);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        console.log("Fetched data:", data);
+        if (Array.isArray(data)) {
+            flashcards = data;
+            console.log("Updated flashcards array:", flashcards);
+            updateFlashcardsList();
+        } else {
+            console.error("Fetched data is not an array:", data);
+            throw new Error("Fetched data is not in the expected format");
+        }
+    } catch (error) {
+        console.error('Error fetching flashcards:', error);
+        alert('Failed to fetch flashcards. Please check the console for more details.');
+    }
+}
+
+function updateFlashcardsList() {
+    console.log("Updating flashcards list. Current flashcards:", flashcards);
+    const list = document.getElementById('flashcards-list');
+    list.innerHTML = '<h2>Your Flashcards</h2>';
+    if (flashcards.length === 0) {
+        list.innerHTML += '<p>No flashcards found. Try creating some!</p>';
+    } else {
+        flashcards.forEach((card, index) => {
+            const div = document.createElement('div');
+            const button = document.createElement('button');
+            button.textContent = `Flashcard ${index + 1}: ${card.front.substring(0, 30)}${card.front.length > 30 ? '...' : ''}`;
+            button.onclick = () => displayFlashcard(index);
+            div.appendChild(button);
+
+            const deleteButton = document.createElement('button');
+            deleteButton.textContent = 'Delete';
+            deleteButton.className = 'delete-btn';
+            deleteButton.onclick = (e) => {
+                e.stopPropagation();
+                deleteFlashcard(card.id);
+            };
+            div.appendChild(deleteButton);
+
+            list.appendChild(div);
+        });
+    }
+    console.log("Flashcards list updated");
+}
+
+async function createFlashcard() {
+    const front = document.getElementById('front').value;
+    const back = document.getElementById('back').value;
+
+    if (front && back) {
+        console.log("Attempting to create flashcard:", { front, back });
+        try {
+            const response = await fetch('/api/flashcards', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ front, back }),
+            });
+            console.log("Create response:", response);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            console.log("Created flashcard:", data);
+            flashcards.push(data);
+            updateFlashcardsList();
+            document.getElementById('front').value = '';
+            document.getElementById('back').value = '';
+            initializeTextareas();
+        } catch (error) {
+            console.error('Error creating flashcard:', error);
+            alert('Failed to create flashcard. Please check the console for more details.');
+        }
+    } else {
+        alert('Please enter both front and back of the flashcard.');
+    }
+}
+
+        async function deleteFlashcard(id) {
+            try {
+                await fetch(`/api/flashcards/${id}`, {
+                    method: 'DELETE',
+                });
+                flashcards = flashcards.filter(card => card.id !== id);
+                updateFlashcardsList();
+                if (currentFlashcardIndex >= flashcards.length) {
+                    currentFlashcardIndex = flashcards.length - 1;
+                }
+                if (flashcards.length > 0) {
+                    displayFlashcard(currentFlashcardIndex);
+                } else {
+                    document.getElementById('flashcard-display').style.display = 'none';
+                    document.getElementById('pure-flashcard-container').style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error deleting flashcard:', error);
+                alert('Failed to delete flashcard. Please try again.');
+            }
+        }
+
+        
+        document.addEventListener('DOMContentLoaded', () => {
+    console.log("DOM loaded, fetching flashcards...");
+    fetchFlashcards();
+    initializeTextareas();
+});
+
+function manualFetch() {
+    console.log("Manual fetch triggered");
+    fetchFlashcards();
+}
     </script>
 </body>
 </html>
