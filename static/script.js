@@ -566,7 +566,7 @@ pureFlashcardDisplay.innerHTML = `
     <button onclick="nextCard()">Next Card</button>
 </div>
 `;
-pureFlashcardDisplay.style.display = 'block';
+pureFlashcardDisplay.style.display = 'none';
 
 // Add event listener for set selection
 const pureFlashcardSetSelect = document.getElementById('pure-flashcard-set-select');
@@ -664,7 +664,11 @@ document.getElementById('create-mode').style.display = 'block';
 }
 
 function Start() {
-    displayCurrentCard();
+    if (isPureFlashcardMode) {
+        displayPureFlashcard();
+        } else {
+        displayCurrentCard();
+        }
 }
 
 // Initialize the application
