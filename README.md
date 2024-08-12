@@ -44,7 +44,7 @@ Follow these steps to get your development environment set up:
 
 4. Install required packages
    ```
-   pip install flask flask-sqlalchemy python-dotenv logging
+   pip install flask flask-sqlalchemy python-dotenv logging Werkzeug
    ```
 
 5. Create a `.env` file in the project root and add the following:
@@ -69,7 +69,7 @@ Follow these steps to get your development environment set up:
    ```
    python app.py
    ```
-3. Open a web browser and navigate to `http://localhost:8080`
+3. Open a web browser and navigate to ` http://127.0.0.1:5000`
 
 ## Usage
 

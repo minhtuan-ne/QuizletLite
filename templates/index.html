@@ -3,403 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quizlet Lite</title>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; margin: 0; padding: 20px; background-color: #f0f2f5; }
-        .container { max-width: 800px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h1, h2 { color: #333; margin-bottom: 20px; }
-        textarea { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; resize: none; overflow-y: hidden; transition: border-color 0.3s; }
-        textarea:focus { outline: none; border-color: #4CAF50; box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2); }
-        button { background-color: #4CAF50; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; transition: background-color 0.3s; margin-right: 10px; }
-        button:hover { background-color: #45a049; }
-        .flashcard { border: 1px solid #e0e0e0; padding: 20px; margin-bottom: 20px; border-radius: 8px; background-color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .result-area { margin-top: 20px; padding: 15px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #f9f9f9; }
-        .score { font-weight: bold; font-size: 1.2em; }
-        .score.correct { color: #4CAF50; }
-        .score.incorrect { color: #FF0000; }
-        #flashcard-display, #result, #back-display { display: none; }
-        #flashcards-list { margin-top: 30px; }
-        #flashcards-list button { margin-bottom: 10px; background-color: #f0f2f5; color: #333; border: 1px solid #ddd; }
-        #flashcards-list button:hover { background-color: #e8eaed; }
-        .navigation { display: flex; justify-content: space-between; margin-top: 20px; }
-        .navigation button { background-color: #2196F3; }
-        .navigation button:hover { background-color: #1976D2; }
-        #pure-flashcard-container { display: none; perspective: 1000px; }
-        .pure-flashcard { position: relative; width: 100%; height: 200px; transition: transform 0.6s; transform-style: preserve-3d; cursor: pointer; }
-        .pure-flashcard.flipped { transform: rotateY(180deg); }
-        .pure-flashcard-front, .pure-flashcard-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .pure-flashcard-back { transform: rotateY(180deg); }
-        .pure-flashcard-navigation { display: flex; justify-content: space-between; margin-top: 20px; }
-        .pure-flashcard-navigation button { background-color: #2196F3; }
-        .pure-flashcard-navigation button:hover { background-color: #1976D2; }
-        .delete-btn {
-            background-color: #f44336;
-            color: white;
-            padding: 5px 10px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            margin-left: 10px;
-        }
-        .delete-btn:hover {
-            background-color: #d32f2f;
-        }
-    </style>
+    <title>Quizlet Lite - Enhanced</title>
+    <link href="/static/styles.css" rel="stylesheet">
 </head>
 <body>
     <div class="container">
-        <h1>Quizlet Lite</h1>
+        <h1>Quizlet Lite - Enhanced</h1>
         
-        <div id="create-flashcard">
-            <h2>Create Flashcard</h2>
-            <textarea id="front" placeholder="Front of card" rows="3"></textarea>
-            <textarea id="back" placeholder="Back of card" rows="3"></textarea>
-            <button onclick="createFlashcard()">Add Flashcard</button>
+        <div id="main-controls">
+            <button id="create-set-btn">Create New Set</button>
+            <button id="start-study-btn">Start Study Mode</button>
+            <button id="start-pure-flashcard-btn">Start Pure Flashcard Mode</button>
         </div>
 
-        <div id="flashcards-list">
-            <h2>Your Flashcards</h2>
-            <!-- Flashcards will be listed here -->
+        <div id="sets-list"></div>
+        
+        <div id="create-mode" class="mode active">
+            <h2>Create New Set</h2>
+            <div class="input-group">
+                <label for="set-name">Set Name:</label>
+                <input type="text" id="set-name" placeholder="Enter set name">
+                <button onclick="createSet()">Create Set</button>
+            </div>
+
+            <div class="input-group">
+                <label for="set-select">Select Set:</label>
+                <select id="set-select" onchange="fetchFlashcards()"></select>
+            </div>
+
+            <div id="create-flashcard">
+                <h2>Create Flashcard</h2>
+                <div class="input-group">
+                    <label for="front">Front:</label>
+                    <textarea id="front" placeholder="Front of card" rows="3"></textarea>
+                </div>
+                <div class="input-group">
+                    <label for="back">Back:</label>
+                    <textarea id="back" placeholder="Back of card" rows="3"></textarea>
+                </div>
+                <div class="input-group">
+                    <label for="front-image">Front Image:</label>
+                    <input type="file" id="front-image" accept="image/*">
+                    <img id="front-image-preview" class="image-preview" alt="Front image preview">
+                </div>
+                <div class="input-group">
+                    <label for="back-image">Back Image:</label>
+                    <input type="file" id="back-image" accept="image/*">
+                    <img id="back-image-preview" class="image-preview" alt="Back image preview">
+                </div>
+                <button onclick="createFlashcard()">Add Flashcard</button>
+            </div>
+
+            <div id="flashcards-list"></div>
         </div>
 
-        <div id="study-options" style="margin-top: 20px;">
-            <button onclick="startStudyMode()">Study Mode</button>
-            <button onclick="startPureFlashcardMode()">Pure Flashcard Mode</button>
-            <button onclick="shuffleFlashcards()">Shuffle Flashcards</button>
+        <div id="study-mode" class="mode">
+            <h2>Study Mode</h2>
+            <div id="study-controls"></div>
+            <div id="flashcard-display"></div>
         </div>
 
-        <div id="flashcard-display" class="flashcard">
-            <h2>Study Flashcard</h2>
-            <p id="front-display"></p>
-            <textarea id="user-answer" placeholder="Your answer" rows="3"></textarea>
-            <button onclick="checkAnswer()">Check Answer</button>
-            <div id="result" class="result-area">
-                <p class="score" id="score"></p>
-                <p id="explanation"></p>
-            </div>
-            <p id="back-display"></p>
-            <div class="navigation">
-                <button onclick="navigateFlashcard(-1)">Previous</button>
-                <button onclick="navigateFlashcard(1)">Next</button>
-            </div>
-        </div>
-
-        <div id="pure-flashcard-container">
-            <div class="pure-flashcard" onclick="flipPureFlashcard()">
-                <div class="pure-flashcard-front"></div>
-                <div class="pure-flashcard-back"></div>
-            </div>
-            <div class="pure-flashcard-navigation">
-                <button onclick="navigatePureFlashcard(-1)">Previous</button>
-                <button onclick="shufflePureFlashcards()">Shuffle</button>
-                <button onclick="navigatePureFlashcard(1)">Next</button>
-            </div>
+        <div id="pure-flashcard-mode" class="mode">
+            <h2>Pure Flashcard Mode</h2>
+            <div id="pure-flashcard-controls"></div>
+            <div id="pure-flashcard-display"></div>
         </div>
     </div>
 
-    <script>
-        let flashcards = [];
-        let currentFlashcardIndex = -1;
-        let isPureFlashcardMode = false;
-        let isShowingFront = true;
-
-        function resizeTextarea(element) {
-            element.style.height = 'auto';
-            element.style.height = (element.scrollHeight) + 'px';
-        }
-
-        function initializeTextareas() {
-            const textareas = document.querySelectorAll('textarea');
-            textareas.forEach(textarea => {
-                textarea.addEventListener('input', function() {
-                    resizeTextarea(this);
-                });
-                resizeTextarea(textarea);
-            });
-        }
-
-      
-        function updateFlashcardsList() {
-            const list = document.getElementById('flashcards-list');
-            list.innerHTML = '<h2>Your Flashcards</h2>';
-            flashcards.forEach((card, index) => {
-                const button = document.createElement('button');
-                button.textContent = `Flashcard ${index + 1}: ${card.front.substring(0, 30)}${card.front.length > 30 ? '...' : ''}`;
-                button.onclick = () => displayFlashcard(index);
-                list.appendChild(button);
-            });
-        }
-
-        function displayFlashcard(index) {
-            if (index >= 0 && index < flashcards.length) {
-                currentFlashcardIndex = index;
-                const card = flashcards[index];
-                document.getElementById('flashcard-display').style.display = 'block';
-                document.getElementById('front-display').textContent = card.front;
-                document.getElementById('back-display').style.display = 'none';
-                document.getElementById('result').style.display = 'none';
-                document.getElementById('user-answer').value = '';
-                initializeTextareas();
-            }
-        }
-
-        function navigateFlashcard(direction) {
-            const newIndex = currentFlashcardIndex + direction;
-            if (newIndex >= 0 && newIndex < flashcards.length) {
-                displayFlashcard(newIndex);
-            }
-        }
-
-        
-
-        function startStudyMode() {
-            isPureFlashcardMode = false;
-            document.getElementById('flashcard-display').style.display = 'block';
-            document.getElementById('pure-flashcard-container').style.display = 'none';
-            if (flashcards.length > 0) {
-                displayFlashcard(0);
-            } else {
-                alert('Please create some flashcards first!');
-            }
-        }
-
-        function startPureFlashcardMode() {
-            if (flashcards.length === 0) {
-                alert('Please create some flashcards first!');
-                return;
-            }
-            isPureFlashcardMode = true;
-            currentFlashcardIndex = 0;
-            isShowingFront = true;
-            document.getElementById('flashcard-display').style.display = 'none';
-            document.getElementById('pure-flashcard-container').style.display = 'block';
-            updatePureFlashcard();
-        }
-
-        function updatePureFlashcard() {
-        const card = flashcards[currentFlashcardIndex];
-        document.querySelector('.pure-flashcard-front').textContent = card.front;
-        document.querySelector('.pure-flashcard-back').textContent = card.back;
-        document.querySelector('.pure-flashcard').classList.remove('flipped');
-        isShowingFront = true;
-    }
-
-        function flipPureFlashcard() {
-            if (!isPureFlashcardMode) return;
-            document.querySelector('.pure-flashcard').classList.toggle('flipped');
-            isShowingFront = !isShowingFront;
-        }
-
-        function navigatePureFlashcard(direction) {
-    if (!isPureFlashcardMode) return;
-    currentFlashcardIndex += direction;
-    if (currentFlashcardIndex < 0) {
-        currentFlashcardIndex = flashcards.length - 1;
-    } else if (currentFlashcardIndex >= flashcards.length) {
-        currentFlashcardIndex = 0;
-    }
-    updatePureFlashcard();
-    // Reset the card to its front face
-    document.querySelector('.pure-flashcard').classList.remove('flipped');
-    isShowingFront = true;
-}
-
-
-        function shufflePureFlashcards() {
-            if (!isPureFlashcardMode) return;
-            shuffleFlashcards();
-            currentFlashcardIndex = 0;
-            updatePureFlashcard();
-        }
-
-        function shuffleFlashcards() {
-            for (let i = flashcards.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [flashcards[i], flashcards[j]] = [flashcards[j], flashcards[i]];
-            }
-            updateFlashcardsList();
-            if (!isPureFlashcardMode) {
-                alert('Flashcards have been shuffled!');
-            }
-        }
-
-        async function fetchFlashcards() {
-    console.log("Attempting to fetch flashcards...");
-    try {
-        const response = await fetch('/api/flashcards');
-        console.log("Fetch response:", response);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        console.log("Fetched data:", data);
-        if (Array.isArray(data)) {
-            flashcards = data;
-            console.log("Updated flashcards array:", flashcards);
-            updateFlashcardsList();
-        } else {
-            console.error("Fetched data is not an array:", data);
-            throw new Error("Fetched data is not in the expected format");
-        }
-    } catch (error) {
-        console.error('Error fetching flashcards:', error);
-        alert('Failed to fetch flashcards. Please check the console for more details.');
-    }
-}
-
-function updateFlashcardsList() {
-    console.log("Updating flashcards list. Current flashcards:", flashcards);
-    const list = document.getElementById('flashcards-list');
-    list.innerHTML = '<h2>Your Flashcards</h2>';
-    if (flashcards.length === 0) {
-        list.innerHTML += '<p>No flashcards found. Try creating some!</p>';
-    } else {
-        flashcards.forEach((card, index) => {
-            const div = document.createElement('div');
-            const button = document.createElement('button');
-            button.textContent = `Flashcard ${index + 1}: ${card.front.substring(0, 30)}${card.front.length > 30 ? '...' : ''}`;
-            button.onclick = () => displayFlashcard(index);
-            div.appendChild(button);
-
-            const deleteButton = document.createElement('button');
-            deleteButton.textContent = 'Delete';
-            deleteButton.className = 'delete-btn';
-            deleteButton.onclick = (e) => {
-                e.stopPropagation();
-                deleteFlashcard(card.id);
-            };
-            div.appendChild(deleteButton);
-
-            list.appendChild(div);
-        });
-    }
-    console.log("Flashcards list updated");
-}
-
-async function createFlashcard() {
-    const front = document.getElementById('front').value;
-    const back = document.getElementById('back').value;
-
-    if (front && back) {
-        console.log("Attempting to create flashcard:", { front, back });
-        try {
-            const response = await fetch('/api/flashcards', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ front, back }),
-            });
-            console.log("Create response:", response);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const data = await response.json();
-            console.log("Created flashcard:", data);
-            flashcards.push(data);
-            updateFlashcardsList();
-            document.getElementById('front').value = '';
-            document.getElementById('back').value = '';
-            initializeTextareas();
-        } catch (error) {
-            console.error('Error creating flashcard:', error);
-            alert('Failed to create flashcard. Please check the console for more details.');
-        }
-    } else {
-        alert('Please enter both front and back of the flashcard.');
-    }
-}
-
-        async function deleteFlashcard(id) {
-            try {
-                await fetch(`/api/flashcards/${id}`, {
-                    method: 'DELETE',
-                });
-                flashcards = flashcards.filter(card => card.id !== id);
-                updateFlashcardsList();
-                if (currentFlashcardIndex >= flashcards.length) {
-                    currentFlashcardIndex = flashcards.length - 1;
-                }
-                if (flashcards.length > 0) {
-                    displayFlashcard(currentFlashcardIndex);
-                } else {
-                    document.getElementById('flashcard-display').style.display = 'none';
-                    document.getElementById('pure-flashcard-container').style.display = 'none';
-                }
-            } catch (error) {
-                console.error('Error deleting flashcard:', error);
-                alert('Failed to delete flashcard. Please try again.');
-            }
-        }
-
-        
-        document.addEventListener('DOMContentLoaded', () => {
-    console.log("DOM loaded, fetching flashcards...");
-    fetchFlashcards();
-    initializeTextareas();
-});
-
-function manualFetch() {
-    console.log("Manual fetch triggered");
-    fetchFlashcards();
-}
-// Add this function to handle keydown events
-function handleKeyPress(event) {
-    if (event.key === 'Enter') {
-        if (isPureFlashcardMode) {
-            flipPureFlashcard();
-        } else {
-            checkAnswer();
-        }
-    } else if (event.key === 'ArrowLeft') {
-        if (isPureFlashcardMode) {
-            navigatePureFlashcard(-1);
-        } else {
-            navigateFlashcard(-1);
-        }
-    } else if (event.key === 'ArrowRight') {
-        if (isPureFlashcardMode) {
-            navigatePureFlashcard(1);
-        } else {
-            navigateFlashcard(1);
-        }
-    }
-}
-
-// Add this event listener to the document
-document.addEventListener('keydown', handleKeyPress);
-
-// Modify the checkAnswer function to prevent default form submission
-function checkAnswer(event) {
-    if (event) {
-        event.preventDefault();
-    }
-    const userAnswer = document.getElementById('user-answer').value.trim();
-    const currentCard = flashcards[currentFlashcardIndex];
-    const correctAnswer = currentCard.back.trim();
-
-    const isCorrect = userAnswer.toLowerCase() === correctAnswer.toLowerCase();
-
-    const scoreElement = document.getElementById('score');
-    scoreElement.textContent = isCorrect ? "Correct!" : "Incorrect";
-    scoreElement.className = isCorrect ? "score correct" : "score incorrect";
-
-    document.getElementById('explanation').textContent = isCorrect 
-        ? "Great job! Your answer matches exactly." 
-        : "Your answer doesn't match exactly. Please try again.";
-    document.getElementById('result').style.display = 'block';
-    document.getElementById('back-display').textContent = `Correct answer: ${correctAnswer}`;
-    document.getElementById('back-display').style.display = 'block';
-}
-
-// Add this to prevent form submission when pressing Enter
-document.getElementById('user-answer').addEventListener('keydown', function(event) {
-    if (event.key === 'Enter') {
-        event.preventDefault();
-        checkAnswer();
-    }
-});
-    </script>
+<script src="/static/script.js"></script>
 </body>
 </html>
