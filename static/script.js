@@ -144,6 +144,65 @@ async function loadSets(selectId = 'set-select') {
         updateStatusMessage('Failed to load sets. Please try again.', 'error');
     }
 }
+
+async function loadSetsForStudyMode() {
+    try {
+        const response = await fetch('/api/sets');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const sets = await response.json();
+        
+        const setSelect = document.getElementById('study-mode-set-select');
+        setSelect.innerHTML = '<option value="">Select a set</option>';
+        sets.forEach(set => {
+            const option = document.createElement('option');
+            option.value = set.id;
+            option.textContent = set.name;
+            setSelect.appendChild(option);
+        });
+        
+        // Add change event listener to the dropdown
+        setSelect.addEventListener('change', (event) => {
+            if (event.target.value) {
+                fetchFlashcards(event.target.value);
+            }
+        });
+    } catch (error) {
+        console.error('Error loading sets for study mode:', error);
+        updateStatusMessage('Failed to load sets. Please try again.', 'error');
+    }
+}
+
+async function loadSetsForPureFlashcardMode() {
+    try {
+        const response = await fetch('/api/sets');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const sets = await response.json();
+        
+        const setSelect = document.getElementById('pure-flashcard-set-select');
+        setSelect.innerHTML = '<option value="">Select a set</option>';
+        sets.forEach(set => {
+            const option = document.createElement('option');
+            option.value = set.id;
+            option.textContent = set.name;
+            setSelect.appendChild(option);
+        });
+        
+        // Add change event listener to the dropdown
+        setSelect.addEventListener('change', (event) => {
+            if (event.target.value) {
+                fetchFlashcards(event.target.value);
+            }
+        });
+    } catch (error) {
+        console.error('Error loading sets for pure flashcard mode:', error);
+        updateStatusMessage('Failed to load sets. Please try again.', 'error');
+    }
+}
+
 // Make sure loadSets is called when the page loads
 window.addEventListener('DOMContentLoaded', (event) => {
     console.log('DOM fully loaded and parsed');
@@ -237,23 +296,33 @@ document.getElementById('back-image-preview').style.display = 'none';
 
 async function fetchFlashcards(setId) {
     if (!setId) return;
-
+    console.log("Fetching flashcards for set:", setId);
     try {
         const response = await fetch(`/api/flashcards?set_id=${setId}`);
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to fetch flashcards');
+            throw new Error('Failed to fetch flashcards');
         }
         flashcards = await response.json();
+        console.log("Fetched flashcards:", flashcards);
         currentSetId = setId;
         currentCardIndex = 0;
-        updateFlashcardsList();
+        
+        if (currentMode === 'create') {
+            updateFlashcardsList();
+        } else if (currentMode === 'study') {
+            displayCurrentCard();
+        } else if (currentMode === 'pure-flashcard') {
+            displayPureFlashcard();
+        }
+        
         updateStatusMessage('Flashcards loaded successfully', 'success');
     } catch (error) {
         console.error('Error fetching flashcards:', error);
         updateStatusMessage(`Failed to fetch flashcards: ${error.message}`, 'error');
         flashcards = [];
-        updateFlashcardsList();
+        if (currentMode === 'create') {
+            updateFlashcardsList();
+        }
     }
 }
 
@@ -349,15 +418,16 @@ setupStudyMode();
 }
 
 function setupStudyMode() {
-const studyControls = document.getElementById('study-controls');
-studyControls.innerHTML = `
-<select class="set-select" onchange="fetchFlashcards(this.value)">
-    <option value="">Select a set</option>
-</select>
-<button onclick="shuffleFlashcards()">Shuffle</button>
-<button onclick="exitStudyMode()">Exit Study Mode</button>
-`;
-loadSets();
+    const studyControls = document.getElementById('study-controls');
+    studyControls.innerHTML = `
+        <select id="study-mode-set-select">
+            <option value="">Select a set</option>
+        </select>
+        <button onclick="Start()">Start</button>
+        <button onclick="shuffleFlashcards()">Shuffle</button>
+        <button onclick="exitStudyMode()">Exit Study Mode</button>
+    `;
+    loadSetsForStudyMode();
 
 
 const flashcardDisplay = document.getElementById('flashcard-display');
@@ -381,27 +451,28 @@ document.addEventListener('keydown', handleKeyPress);
 
 
 function displayCurrentCard() {
-const flashcardDisplay = document.getElementById('flashcard-display');
-if (flashcards.length === 0) {
-flashcardDisplay.innerHTML = '<p>No flashcards available for this set.</p>';
-return;
-}
+    console.log("Displaying current card, index:", currentCardIndex);
+    const flashcardDisplay = document.getElementById('flashcard-display');
+    if (flashcards.length === 0) {
+        flashcardDisplay.innerHTML = '<p>No flashcards available for this set.</p>';
+        return;
+    }
 
-const card = flashcards[currentCardIndex];
-flashcardDisplay.innerHTML = `
-<div class="flashcard">
-    <p id="front-display">${card.front}</p>
-    <textarea id="user-answer" placeholder="Your answer" rows="3"></textarea>
-    <button onclick="checkAnswer()">Check Answer</button>
-    <p id="back-display" style="display: none;">${card.back}</p>
-</div>
-<div id="result"></div>
-<div class="navigation-controls">
-    <button onclick="prevCard()">Previous Card</button>
-    <button onclick="nextCard()">Next Card</button>
-</div>
-`;
-flashcardDisplay.style.display = 'block';
+    const card = flashcards[currentCardIndex];
+    flashcardDisplay.innerHTML = `
+        <div class="flashcard">
+            <p id="front-display">${card.front}</p>
+            <textarea id="user-answer" placeholder="Your answer" rows="3"></textarea>
+            <button onclick="checkAnswer()">Check Answer</button>
+            <p id="back-display" style="display: none;">${card.back}</p>
+        </div>
+        <div id="result"></div>
+        <div class="navigation-controls">
+            <button onclick="prevCard()">Previous Card</button>
+            <button onclick="nextCard()">Next Card</button>
+        </div>
+    `;
+    flashcardDisplay.style.display = 'block';
 }
 
 function checkAnswer() {
@@ -465,14 +536,16 @@ setupPureFlashcardMode();
 
 
 function setupPureFlashcardMode() {
-const pureFlashcardControls = document.getElementById('pure-flashcard-controls');
-pureFlashcardControls.innerHTML = `
-<select id="pure-flashcard-set-select" class="set-select">
-    <option value="">Select a set</option>
-</select>
-<button onclick="shuffleFlashcards()">Shuffle</button>
-<button onclick="exitPureFlashcardMode()">Exit Pure Flashcard Mode</button>
-`;
+    const pureFlashcardControls = document.getElementById('pure-flashcard-controls');
+    pureFlashcardControls.innerHTML = `
+        <select id="pure-flashcard-set-select">
+            <option value="">Select a set</option>
+        </select>
+        <button onclick="Start()">Start</button>
+        <button onclick="shuffleFlashcards()">Shuffle</button>
+        <button onclick="exitPureFlashcardMode()">Exit Pure Flashcard Mode</button>
+        `;
+    loadSetsForPureFlashcardMode();
 
 const pureFlashcardDisplay = document.getElementById('pure-flashcard-display');
 pureFlashcardDisplay.innerHTML = `
@@ -493,7 +566,7 @@ pureFlashcardDisplay.innerHTML = `
     <button onclick="nextCard()">Next Card</button>
 </div>
 `;
-pureFlashcardDisplay.style.display = 'none';
+pureFlashcardDisplay.style.display = 'block';
 
 // Add event listener for set selection
 const pureFlashcardSetSelect = document.getElementById('pure-flashcard-set-select');
@@ -501,25 +574,43 @@ pureFlashcardSetSelect.addEventListener('change', function() {
 fetchFlashcards(this.value);
 });
 
-loadSets();
 }
 
 
 function displayPureFlashcard() {
-const pureFlashcardDisplay = document.getElementById('pure-flashcard-display');
-if (flashcards.length === 0) {
-pureFlashcardDisplay.innerHTML = '<p>No flashcards available for this set.</p>';
-return;
+    const pureFlashcardDisplay = document.getElementById('pure-flashcard-display');
+    console.log("Displaying pure flashcard, index:", currentCardIndex);
+
+    if (flashcards.length === 0) {
+        pureFlashcardDisplay.innerHTML = '<p>No flashcards available for this set.</p>';
+        return;
+    }
+
+    const card = flashcards[currentCardIndex];
+    const frontImageHtml = card.front_image ? `<img src="${card.front_image}" alt="Front image" class="flashcard-image">` : '';
+    const backImageHtml = card.back_image ? `<img src="${card.back_image}" alt="Back image" class="flashcard-image">` : '';
+
+    pureFlashcardDisplay.innerHTML = `
+        <div class="pure-flashcard" onclick="flipPureFlashcard()">
+            <div class="pure-flashcard-inner">
+                <div class="pure-flashcard-front">
+                    ${frontImageHtml}
+                    <p id="pure-front-text">${card.front}</p>
+                </div>
+                <div class="pure-flashcard-back">
+                    ${backImageHtml}
+                    <p id="pure-back-text">${card.back}</p>
+                </div>
+            </div>
+        </div>
+        <div class="navigation-controls">
+            <button onclick="prevCard()">Previous Card</button>
+            <button onclick="nextCard()">Next Card</button>
+        </div>
+    `;
+    pureFlashcardDisplay.style.display = 'block';
 }
 
-const card = flashcards[currentCardIndex];
-document.getElementById('pure-front-text').textContent = card.front;
-document.getElementById('pure-back-text').textContent = card.back;
-document.getElementById('pure-front-image').src = card.front_image || '';
-document.getElementById('pure-back-image').src = card.back_image || '';
-document.querySelector('.pure-flashcard').classList.remove('flipped');
-pureFlashcardDisplay.style.display = 'block';
-}
 function flipPureFlashcard() {
 document.querySelector('.pure-flashcard').classList.toggle('flipped');
 }
@@ -570,6 +661,10 @@ function exitPureFlashcardMode() {
 document.removeEventListener('keydown', handleKeyPress);
 document.getElementById('pure-flashcard-mode').style.display = 'none';
 document.getElementById('create-mode').style.display = 'block';
+}
+
+function Start() {
+    displayCurrentCard();
 }
 
 // Initialize the application
