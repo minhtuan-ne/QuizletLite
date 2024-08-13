@@ -5,6 +5,7 @@ import os
 import logging
 from werkzeug.utils import secure_filename
 from sqlalchemy import inspect
+import uuid
 
 
 app = Flask(__name__)
@@ -132,8 +133,9 @@ def delete_flashcard(flashcard_id):
     return '', 204
     
 def save_image(image):
-    filename = image.filename
-    path = os.path.join('static', 'uploads', filename)
+    filename = secure_filename(image.filename)
+    unique_filename = f"{uuid.uuid4()}_{filename}"
+    path = os.path.join('static', 'uploads', unique_filename)
     image.save(path)
     return path
 
@@ -142,8 +144,45 @@ def delete_image(image_path):
         os.remove(image_path)
 
 
-    
-    
+@app.route('/api/flashcards/update', methods=['POST'])
+def update_flashcard():
+    try:
+        flashcard_id = request.form.get('id')
+        flashcard = Flashcard.query.get_or_404(flashcard_id)
+
+        flashcard.front = request.form.get('front')
+        flashcard.back = request.form.get('back')
+
+        front_image = request.files.get('front_image')
+        back_image = request.files.get('back_image')
+
+        if front_image:
+            if flashcard.front_image:
+                delete_image(flashcard.front_image)
+            front_image_path = save_image(front_image)
+            flashcard.front_image = front_image_path
+
+        if back_image:
+            if flashcard.back_image:
+                delete_image(flashcard.back_image)
+            back_image_path = save_image(back_image)
+            flashcard.back_image = back_image_path
+
+        db.session.commit()
+
+        return jsonify({
+            'id': flashcard.id,
+            'front': flashcard.front,
+            'back': flashcard.back,
+            'front_image': flashcard.front_image,
+            'back_image': flashcard.back_image,
+            'set_id': flashcard.set_id
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error updating flashcard: {str(e)}")
+        return jsonify({"error": "Failed to update flashcard"}), 500
+
 @app.route('/uploads/<path:filename>')
 def serve_image(filename):
     return send_file(os.path.join(app.config['UPLOAD_FOLDER'], filename))

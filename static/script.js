@@ -286,12 +286,19 @@ alert('Failed to create flashcard. Please try again.');
 }
 
 function resetForm() {
-document.getElementById('front').value = '';
-document.getElementById('back').value = '';
-document.getElementById('front-image').value = '';
-document.getElementById('back-image').value = '';
-document.getElementById('front-image-preview').style.display = 'none';
-document.getElementById('back-image-preview').style.display = 'none';
+    document.getElementById('front').value = '';
+    document.getElementById('back').value = '';
+    document.getElementById('front-image').value = '';
+    document.getElementById('back-image').value = '';
+    document.getElementById('front-image-preview').style.display = 'none';
+    document.getElementById('back-image-preview').style.display = 'none';
+    
+    // Reset the button to "Add Flashcard"
+    const addButton = document.querySelector('button[onclick^="updateFlashcard"]');
+    if (addButton) {
+        addButton.textContent = 'Add Flashcard';
+        addButton.onclick = createFlashcard;
+    }
 }
 
 async function fetchFlashcards(setId) {
@@ -363,28 +370,99 @@ try {
 }
 }
 
-function updateFlashcardsList() {
-const list = document.getElementById('flashcards-list');
-list.innerHTML = '<h2>Your Flashcards</h2>';
-if (flashcards.length === 0) {
-list.innerHTML += '<p>No flashcards found. Try creating some!</p>';
-} else {
-flashcards.forEach((card, index) => {
-    const cardElement = document.createElement('div');
-    cardElement.className = 'flashcard';
-    cardElement.innerHTML = `
-        <p><strong>Front:</strong> ${card.front}</p>
-        <p><strong>Back:</strong> ${card.back}</p>
-        ${card.front_image ? `<img src="${card.front_image}" alt="Front image" style="max-width: 100px;">` : ''}
-        ${card.back_image ? `<img src="${card.back_image}" alt="Back image" style="max-width: 100px;">` : ''}
-        <div class="flashcard-controls">
-            <button onclick="editFlashcard(${index})">Edit</button>
-            <button class="delete-btn" onclick="deleteFlashcard(${card.id})">Delete</button>
-        </div>
-    `;
-    list.appendChild(cardElement);
-});
+async function updateFlashcard(id, index) {
+    const front = document.getElementById('front').value;
+    const back = document.getElementById('back').value;
+    const frontImage = document.getElementById('front-image').files[0];
+    const backImage = document.getElementById('back-image').files[0];
+
+    if (!front || !back) {
+        alert('Please enter both front and back of the card');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('id', id);
+    formData.append('front', front);
+    formData.append('back', back);
+    if (frontImage) formData.append('front_image', frontImage);
+    if (backImage) formData.append('back_image', backImage);
+
+    try {
+        const response = await fetch('/api/flashcards/update', {
+            method: 'POST',
+            body: formData
+        });
+        if (!response.ok) throw new Error('Failed to update flashcard');
+        const updatedFlashcard = await response.json();
+        
+        // Update the flashcard in the local array
+        flashcards[index] = updatedFlashcard;
+        
+        alert('Flashcard updated successfully');
+        resetForm();
+        updateFlashcardsList();
+        
+        // Instead of trying to modify the button directly, we'll update the entire form
+        setupCreateForm();
+    } catch (error) {
+        console.error('Error updating flashcard:', error);
+        alert('Failed to update flashcard. Please try again.');
+    }
 }
+
+// Add this new function to reset the form to its initial state
+function setupCreateForm() {
+    const createFlashcardDiv = document.getElementById('create-flashcard');
+    if (createFlashcardDiv) {
+        createFlashcardDiv.innerHTML = `
+            <h2>Create Flashcard</h2>
+            <div class="input-group">
+                <label for="front">Front:</label>
+                <textarea id="front" placeholder="Front of card" rows="3"></textarea>
+            </div>
+            <div class="input-group">
+                <label for="back">Back:</label>
+                <textarea id="back" placeholder="Back of card" rows="3"></textarea>
+            </div>
+            <div class="input-group">
+                <label for="front-image">Front Image:</label>
+                <input type="file" id="front-image" accept="image/*">
+                <img id="front-image-preview" class="image-preview" alt="Front image preview">
+            </div>
+            <div class="input-group">
+                <label for="back-image">Back Image:</label>
+                <input type="file" id="back-image" accept="image/*">
+                <img id="back-image-preview" class="image-preview" alt="Back image preview">
+            </div>
+            <button onclick="createFlashcard()">Add Flashcard</button>
+        `;
+    }
+}
+
+
+function updateFlashcardsList() {
+    const list = document.getElementById('flashcards-list');
+    list.innerHTML = '<h2>Your Flashcards</h2>';
+    if (flashcards.length === 0) {
+        list.innerHTML += '<p>No flashcards found. Try creating some!</p>';
+    } else {
+        flashcards.forEach((card, index) => {
+            const cardElement = document.createElement('div');
+            cardElement.className = 'flashcard';
+            cardElement.innerHTML = `
+                <p><strong>Front:</strong> ${card.front}</p>
+                <p><strong>Back:</strong> ${card.back}</p>
+                ${card.front_image ? `<img src="${card.front_image}" alt="Front image" style="max-width: 100px;">` : ''}
+                ${card.back_image ? `<img src="${card.back_image}" alt="Back image" style="max-width: 100px;">` : ''}
+                <div class="flashcard-controls">
+                    <button onclick="editFlashcard(${index})">Edit</button>
+                    <button class="delete-btn" onclick="deleteFlashcard(${card.id})">Delete</button>
+                </div>
+            `;
+            list.appendChild(cardElement);
+        });
+    }
 }
 
 async function deleteFlashcard(id) {
@@ -402,11 +480,35 @@ try {
 }
 
 function editFlashcard(index) {
-const card = flashcards[index];
-document.getElementById('front').value = card.front;
-document.getElementById('back').value = card.back;
-// You might want to handle image editing here as well
-// This is a simple implementation; you may want to expand on this
+    const card = flashcards[index];
+    document.getElementById('front').value = card.front;
+    document.getElementById('back').value = card.back;
+    
+    // Update image previews if they exist
+    const frontImagePreview = document.getElementById('front-image-preview');
+    const backImagePreview = document.getElementById('back-image-preview');
+    
+    if (card.front_image) {
+        frontImagePreview.src = card.front_image;
+        frontImagePreview.style.display = 'block';
+    } else {
+        frontImagePreview.style.display = 'none';
+    }
+    
+    if (card.back_image) {
+        backImagePreview.src = card.back_image;
+        backImagePreview.style.display = 'block';
+    } else {
+        backImagePreview.style.display = 'none';
+    }
+    
+    // Change the "Add Flashcard" button to "Update Flashcard"
+    const addButton = document.querySelector('button[onclick="createFlashcard()"]');
+    addButton.textContent = 'Update Flashcard';
+    addButton.onclick = function() { updateFlashcard(card.id, index); };
+    
+    // Scroll to the edit form
+    document.getElementById('create-flashcard').scrollIntoView({behavior: 'smooth'});
 }
 
 function startStudyMode() {
