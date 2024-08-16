@@ -1,4 +1,4 @@
-# Flask Flashcard App
+# Quizzler
 
 A simple web application for creating and studying flashcards, built with Flask and SQLite.
 
