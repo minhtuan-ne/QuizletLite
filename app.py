@@ -6,7 +6,10 @@ import logging
 from werkzeug.utils import secure_filename
 from sqlalchemy import inspect
 import uuid
+import psycopg2
+from dotenv import load_dotenv
 
+load_dotenv()
 
 app = Flask(__name__)
 
@@ -14,15 +17,20 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.DEBUG)
 logger = app.logger
 
+NEON_DB_URL = os.environ.get("NEON_DB_URL")
+
 # SQLite database configuration
-basedir = os.path.abspath(os.path.dirname(__file__))
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'flashcards.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = NEON_DB_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max-limit
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
+
+# Ensure upload directory exists
+upload_dir = os.path.join('static', 'uploads')
+os.makedirs(upload_dir, exist_ok=True)
 
 class FlashcardSet(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -94,9 +102,13 @@ def manage_flashcards():
         front_image = request.files.get('front_image')
         back_image = request.files.get('back_image')
         
+        # Allow empty text if an image is provided
+        if not (data.get('front') or front_image) or not (data.get('back') or back_image):
+            return jsonify({"error": "Please provide text or image for both front and back of the card"}), 400
+
         new_flashcard = Flashcard(
-            front=data['front'],
-            back=data['back'],
+            front=data.get('front', ''),
+            back=data.get('back', ''),
             set_id=data['set_id']
         )
         

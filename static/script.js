@@ -247,42 +247,42 @@ function displaySets(sets) {
 }
 
 async function createFlashcard() {
-const front = document.getElementById('front').value;
-const back = document.getElementById('back').value;
-const setId = document.getElementById('set-select').value;
-const frontImage = document.getElementById('front-image').files[0];
-const backImage = document.getElementById('back-image').files[0];
+    const front = document.getElementById('front').value;
+    const back = document.getElementById('back').value;
+    const setId = document.getElementById('set-select').value;
+    const frontImage = document.getElementById('front-image').files[0];
+    const backImage = document.getElementById('back-image').files[0];
 
-if (!setId) {
-alert('Please select a set first');
-return;
-}
-if (!front || !back) {
-alert('Please enter both front and back of the card');
-return;
-}
+    if (!setId) {
+        alert('Please select a set first');
+        return;
+    }
+    if ((!front && !frontImage) || (!back && !backImage)) {
+        alert('Please provide text or image for both front and back of the card');
+        return;
+    }
 
-const formData = new FormData();
-formData.append('front', front);
-formData.append('back', back);
-formData.append('set_id', setId);
-if (frontImage) formData.append('front_image', frontImage);
-if (backImage) formData.append('back_image', backImage);
+    const formData = new FormData();
+    formData.append('front', front);
+    formData.append('back', back);
+    formData.append('set_id', setId);
+    if (frontImage) formData.append('front_image', frontImage);
+    if (backImage) formData.append('back_image', backImage);
 
-try {
-const response = await fetch('/api/flashcards', {
-    method: 'POST',
-    body: formData
-});
-if (!response.ok) throw new Error('Failed to create flashcard');
-const newFlashcard = await response.json();
-alert('Flashcard created successfully');
-resetForm();
-await fetchFlashcards(setId); // Add this line
-} catch (error) {
-console.error('Error creating flashcard:', error);
-alert('Failed to create flashcard. Please try again.');
-}
+    try {
+        const response = await fetch('/api/flashcards', {
+            method: 'POST',
+            body: formData
+        });
+        if (!response.ok) throw new Error('Failed to create flashcard');
+        const newFlashcard = await response.json();
+        alert('Flashcard created successfully');
+        resetForm();
+        await fetchFlashcards(setId);
+    } catch (error) {
+        console.error('Error creating flashcard:', error);
+        alert('Failed to create flashcard. Please try again.');
+    }
 }
 
 function resetForm() {
@@ -451,10 +451,14 @@ function updateFlashcardsList() {
             const cardElement = document.createElement('div');
             cardElement.className = 'flashcard';
             cardElement.innerHTML = `
-                <p><strong>Front:</strong> ${card.front}</p>
-                <p><strong>Back:</strong> ${card.back}</p>
-                ${card.front_image ? `<img src="${card.front_image}" alt="Front image" style="max-width: 100px;">` : ''}
-                ${card.back_image ? `<img src="${card.back_image}" alt="Back image" style="max-width: 100px;">` : ''}
+                <div class="flashcard-front">
+                    ${card.front_image ? `<img src="${card.front_image}" alt="Front image" style="max-width: 100px;">` : ''}
+                    <p><strong>Front:</strong> ${card.front}</p>
+                </div>
+                <div class="flashcard-back">
+                    ${card.back_image ? `<img src="${card.back_image}" alt="Back image" style="max-width: 100px;">` : ''}
+                    <p><strong>Back:</strong> ${card.back}</p>
+                </div>
                 <div class="flashcard-controls">
                     <button onclick="editFlashcard(${index})">Edit</button>
                     <button class="delete-btn" onclick="deleteFlashcard(${card.id})">Delete</button>
@@ -481,26 +485,14 @@ try {
 
 function editFlashcard(index) {
     const card = flashcards[index];
+    
+    // Populate form fields
     document.getElementById('front').value = card.front;
     document.getElementById('back').value = card.back;
     
-    // Update image previews if they exist
-    const frontImagePreview = document.getElementById('front-image-preview');
-    const backImagePreview = document.getElementById('back-image-preview');
-    
-    if (card.front_image) {
-        frontImagePreview.src = card.front_image;
-        frontImagePreview.style.display = 'block';
-    } else {
-        frontImagePreview.style.display = 'none';
-    }
-    
-    if (card.back_image) {
-        backImagePreview.src = card.back_image;
-        backImagePreview.style.display = 'block';
-    } else {
-        backImagePreview.style.display = 'none';
-    }
+    // Update image previews
+    updateImagePreview('front-image-preview', card.front_image);
+    updateImagePreview('back-image-preview', card.back_image);
     
     // Change the "Add Flashcard" button to "Update Flashcard"
     const addButton = document.querySelector('button[onclick="createFlashcard()"]');
@@ -509,6 +501,16 @@ function editFlashcard(index) {
     
     // Scroll to the edit form
     document.getElementById('create-flashcard').scrollIntoView({behavior: 'smooth'});
+}
+
+function updateImagePreview(previewId, imageSrc) {
+    const preview = document.getElementById(previewId);
+    if (imageSrc) {
+        preview.src = imageSrc;
+        preview.style.display = 'block';
+    } else {
+        preview.style.display = 'none';
+    }
 }
 
 function startStudyMode() {
@@ -689,8 +691,8 @@ function displayPureFlashcard() {
     }
 
     const card = flashcards[currentCardIndex];
-    const frontImageHtml = card.front_image ? `<img src="${card.front_image}" alt="Front image" class="flashcard-image">` : '';
-    const backImageHtml = card.back_image ? `<img src="${card.back_image}" alt="Back image" class="flashcard-image">` : '';
+    const frontImageHtml = card.front_image ? `<img src="${card.front_image}" alt="Front image" class="pure-flashcard-image">` : '';
+    const backImageHtml = card.back_image ? `<img src="${card.back_image}" alt="Back image" class="pure-flashcard-image">` : '';
 
     pureFlashcardDisplay.innerHTML = `
         <div class="pure-flashcard" onclick="flipPureFlashcard()">
@@ -800,6 +802,35 @@ sets.forEach(set => {
 });
 }
 }
+
+function previewImage(input, previewId) {
+    const preview = document.getElementById(previewId);
+    const file = input.files[0];
+    const reader = new FileReader();
+
+    reader.onloadend = function () {
+        preview.src = reader.result;
+        preview.style.display = 'block';
+    }
+
+    if (file) {
+        reader.readAsDataURL(file);
+    } else {
+        preview.src = "";
+        preview.style.display = 'none';
+    }
+}
+
+// Add these event listeners
+document.getElementById('front-image').addEventListener('change', function() {
+    previewImage(this, 'front-image-preview');
+});
+
+document.getElementById('back-image').addEventListener('change', function() {
+    previewImage(this, 'back-image-preview');
+});
+
+
 document.addEventListener('DOMContentLoaded', (event) => {
     const createSetSelect = document.getElementById('set-select');
     if (createSetSelect) {
