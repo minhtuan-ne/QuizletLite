@@ -19,7 +19,7 @@ logger = app.logger
 
 NEON_DB_URL = os.environ.get("NEON_DB_URL")
 
-# SQLite database configuration
+#Database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = NEON_DB_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'uploads'
