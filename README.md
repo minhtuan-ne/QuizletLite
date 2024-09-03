@@ -44,7 +44,7 @@ Follow these steps to get your development environment set up:
 
 4. Install required packages
    ```
-   pip install flask flask-sqlalchemy python-dotenv logging Werkzeug
+   pip install flask flask-sqlalchemy python-dotenv logging Werkzeug psycopg2 flask_migrate
    ```
 
 5. Create a `.env` file in the project root and add the following:

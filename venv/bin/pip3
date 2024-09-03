@@ -1,4 +1,4 @@
-#!/Users/phamtranminhtuan/Downloads/Project/QuizletLite/venv/bin/python3.12
+#!/Users/phamtranminhtuan/Downloads/Project/Quizzler/venv/bin/python3.12
 # -*- coding: utf-8 -*-
 import re
 import sys
